@@ -3,14 +3,24 @@ version: 0.2
 phases:
   pre_build:
     commands:
+      - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 730335466699.dkr.ecr.ap-south-1.amazonaws.com
   build:
     commands:
+      - echo Building the Docker image...
       - docker build -t ecr1 .
-      - docker tag ecr1:latest 730335466699.dkr.ecr.ap-south-1.amazonaws.com/ecr1:latest
+      - echo Tagging the current green image as blue if it exists...
+      - docker pull 730335466699.dkr.ecr.ap-south-1.amazonaws.com/ecr1:green || true
+      - docker tag 730335466699.dkr.ecr.ap-south-1.amazonaws.com/ecr1:green 730335466699.dkr.ecr.ap-south-1.amazonaws.com/ecr1:blue || true
+      - echo Tagging the Docker image as green...
+      - docker tag ecr1:latest 730335466699.dkr.ecr.ap-south-1.amazonaws.com/ecr1:green
+    
+
   post_build:
     commands:
-      - docker push 730335466699.dkr.ecr.ap-south-1.amazonaws.com/ecr1:latest
+      - echo Pushing the Docker image with blue tag to ECR if it exists...
+      - docker push 730335466699.dkr.ecr.ap-south-1.amazonaws.com/ecr1:blue || true
+      - docker push 730335466699.dkr.ecr.ap-south-1.amazonaws.com/ecr1:green
       - echo Writing image definitions file...
       - printf '[{"name":"mywebsite","imageUri":"%s"}]' $REPOSITORY_URI:latest > imagedefinitions.json
 artifacts:
